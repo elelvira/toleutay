@@ -3,18 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Live Stream</title>
+    <title>Bratislava Kamzik</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .main-container {
+            display: flex;
+            justify-content: space-between; /* Размещаем контейнеры с промежутком */
+            width: 90%;
+            margin-top: 50px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 60%; /* Контейнер для видео из Братиславы займет 60% ширины */
+        }
+
+        .container01 {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 35%; /* Контейнер для камеры пользователя займет 35% ширины */
+        }
+
+        h1, h2 {
+            margin: 0;
+            padding-bottom: 10px;
+        }
+
+        iframe {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        video {
+            width: 100%;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            transform: scaleX(-1); /* Отражаем видео */
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
 </head>
 <body>
-<h1>YouTube Live Stream</h1>
-<div>
-    <iframe width="560" height="315"
-            src="https://www.youtube.com/embed/xRPjKQtRXR8?autoplay=1&mute=1"
-            title="YouTube Live Stream"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen>
-    </iframe>
+<div class="main-container">
+    <!-- Контейнер для видео из Братиславы -->
+    <div class="container">
+        <h1>Bratislava Live Stream</h1>
+        <iframe width="560" height="315"
+                src="https://rtsp.me/embed/nzDnGR7d/"
+                title="Bratislava Kamzik"
+                frameborder="0"
+                allow="accelerometer; autoplay clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+        </iframe>
+    </div>
+
+    <!-- Контейнер для камеры пользователя -->
+    <div class="container01">
+        <h2>Your Camera</h2>
+        <video id="video" autoplay></video>
+        <br>
+        <button id="stopBtn">Stop Camera</button>
+        <p id="errorMessage" class="error"></p>
+    </div>
 </div>
+
+<script>
+    const videoElement = document.getElementById('video');
+    const errorMessage = document.getElementById('errorMessage');
+    const stopButton = document.getElementById('stopBtn');
+
+    // Функция для запроса доступа к камере
+    async function startCamera() {
+        try {
+            // Запрашиваем доступ к камере
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = stream;
+            errorMessage.textContent = '';  // Сброс сообщения об ошибке
+        } catch (error) {
+            // Если произошла ошибка, выводим сообщение
+            errorMessage.textContent = 'Ошибка при доступе к камере: ' + error.message;
+        }
+    }
+
+    // Останавливаем камеру
+    function stopCamera() {
+        let stream = videoElement.srcObject;
+        if (stream) {
+            let tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());  // Останавливаем все треки (видео и аудио)
+            videoElement.srcObject = null;
+        }
+    }
+
+    // Запуск камеры при загрузке страницы
+    window.addEventListener('load', startCamera);
+
+    // Остановка камеры при нажатии на кнопку
+    stopButton.addEventListener('click', stopCamera);
+</script>
 </body>
 </html>
