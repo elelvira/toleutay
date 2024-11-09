@@ -128,8 +128,10 @@
             videoElement.srcObject = stream;
             errorMessage.textContent = '';  // Сброс сообщения об ошибке
             localStream = stream; // Сохраняем локальный поток
+            console.log("Local camera started successfully");
         } catch (error) {
             errorMessage.textContent = 'Ошибка при доступе к камере: ' + error.message;
+            console.error("Camera access error:", error);
         }
     }
 
@@ -149,9 +151,23 @@
     // Остановка камеры при нажатии на кнопку
     stopButton.addEventListener('click', stopCamera);
 
+    signalingServer.onopen = () => {
+        console.log('WebSocket-соединение установлено');
+    };
+
+    signalingServer.onerror = (error) => {
+        console.error('Ошибка WebSocket:', error);
+        errorMessage.textContent = 'Ошибка подключения к серверу WebSocket.';
+    };
+
+    signalingServer.onclose = () => {
+        console.log('WebSocket-соединение закрыто');
+        errorMessage.textContent = 'Соединение с сервером WebSocket закрыто.';
+    };
     // Обработчик сообщений от WebSocket-сервера
     signalingServer.onmessage = async (message) => {
         const data = JSON.parse(message.data);
+        console.log('Received message from server:', data);
 
         if (data.type === 'offer') {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
@@ -173,6 +189,7 @@
             return;
         }
 
+        console.log('Starting peer connection...');
         peerConnection = new RTCPeerConnection(configuration);
 
         // Добавляем локальный стрим в соединение
@@ -196,10 +213,15 @@
             }
         };
 
-        // Создаем SDP offer и отправляем его
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        signalingServer.send(JSON.stringify(peerConnection.localDescription));
+        try {
+            console.log('Creating SDP offer...');
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            signalingServer.send(JSON.stringify(peerConnection.localDescription));
+            console.log('SDP offer sent');
+        } catch (error) {
+            console.error('Error creating offer:', error);
+        }
     };
 </script>
 </body>
