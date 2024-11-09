@@ -26,16 +26,23 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            width: 50%; /* Контейнер для видео из Братиславы займет 60% ширины */
+            width: 60%; /* Контейнер для видео из Братиславы займет 60% ширины */
         }
 
         .container01 {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            width: 50%; /* Контейнер для камеры пользователя займет 35% ширины */
+            width: 35%; /* Контейнер для камеры пользователя займет 35% ширины */
         }
 
+        .container02 {
+            width: 40%;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         h1, h2 {
             margin: 0;
             padding-bottom: 10px;
@@ -89,26 +96,44 @@
         <p id="errorMessage" class="error"></p>
     </div>
 </div>
+<div class="container02">
+    <h2>Friend's camera</h2>
+    <video id="remoteVideo" autoplay playsinline></video>
+    <button id="startCall">Start Call</button>
+</div>
 
 <script>
     const videoElement = document.getElementById('video');
     const errorMessage = document.getElementById('errorMessage');
     const stopButton = document.getElementById('stopBtn');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const startCallButton = document.getElementById('startCall');
 
-    // Функция для запроса доступа к камере
+    let localStream;
+    let remoteStream;
+    let peerConnection;
+    const signalingServer = new WebSocket('ws://localhost:8080');
+
+    // Конфигурация ICE-серверов (нужна для NAT traversal)
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' }
+        ]
+    };
+
+    // Запрос доступа к камере
     async function startCamera() {
         try {
-            // Запрашиваем доступ к камере
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             videoElement.srcObject = stream;
             errorMessage.textContent = '';  // Сброс сообщения об ошибке
+            localStream = stream; // Сохраняем локальный поток
         } catch (error) {
-            // Если произошла ошибка, выводим сообщение
             errorMessage.textContent = 'Ошибка при доступе к камере: ' + error.message;
         }
     }
 
-    // Останавливаем камеру
+    // Остановка камеры
     function stopCamera() {
         let stream = videoElement.srcObject;
         if (stream) {
@@ -123,6 +148,59 @@
 
     // Остановка камеры при нажатии на кнопку
     stopButton.addEventListener('click', stopCamera);
+
+    // Обработчик сообщений от WebSocket-сервера
+    signalingServer.onmessage = async (message) => {
+        const data = JSON.parse(message.data);
+
+        if (data.type === 'offer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            signalingServer.send(JSON.stringify(peerConnection.localDescription));
+        } else if (data.type === 'answer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+        } else if (data.type === 'candidate') {
+            const candidate = new RTCIceCandidate(data.candidate);
+            await peerConnection.addIceCandidate(candidate);
+        }
+    };
+
+    // Функция для начала вызова
+    startCallButton.onclick = async () => {
+        if (!localStream) {
+            console.log('Local stream is not available');
+            return;
+        }
+
+        peerConnection = new RTCPeerConnection(configuration);
+
+        // Добавляем локальный стрим в соединение
+        localStream.getTracks().forEach((track) => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // Обработчик получения удаленного стрима
+        peerConnection.ontrack = (event) => {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+                remoteVideo.srcObject = remoteStream;
+            }
+            remoteStream.addTrack(event.track);
+        };
+
+        // ICE-кандидаты отправляем через WebSocket
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                signalingServer.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
+            }
+        };
+
+        // Создаем SDP offer и отправляем его
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        signalingServer.send(JSON.stringify(peerConnection.localDescription));
+    };
 </script>
 </body>
 </html>
