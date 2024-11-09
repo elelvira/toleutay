@@ -112,7 +112,7 @@
     let localStream;
     let remoteStream;
     let peerConnection;
-    const signalingServer = new WebSocket('ws://147.175.190.236:8080');
+    const signalingServer = new WebSocket('wss://147.175.190.236:8080');
 
     // Конфигурация ICE-серверов (нужна для NAT traversal)
     const configuration = {
