@@ -172,19 +172,50 @@
 
     // Обработчик сообщений от WebSocket-сервера
     signalingServer.onmessage = async (message) => {
-        const data = JSON.parse(message.data);
-        console.log('Received message from server:', data);
+        if (message.data instanceof Blob) {
+            // Если сообщение является Blob, преобразуем его в текст перед парсингом
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    console.log('Получено и распознано сообщение от сервера:', data);
 
-        if (data.type === 'offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            signalingServer.send(JSON.stringify(peerConnection.localDescription));
-        } else if (data.type === 'answer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-        } else if (data.type === 'candidate') {
-            const candidate = new RTCIceCandidate(data.candidate);
-            await peerConnection.addIceCandidate(candidate);
+                    if (data.type === 'offer') {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        signalingServer.send(JSON.stringify(peerConnection.localDescription));
+                    } else if (data.type === 'answer') {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+                    } else if (data.type === 'candidate') {
+                        const candidate = new RTCIceCandidate(data.candidate);
+                        await peerConnection.addIceCandidate(candidate);
+                    }
+                } catch (error) {
+                    console.error('Ошибка при попытке распознать сообщение как JSON:', error);
+                }
+            };
+            reader.readAsText(message.data);
+        } else {
+            // Обычная обработка JSON-сообщений
+            try {
+                const data = JSON.parse(message.data);
+                console.log('Получено сообщение от сервера:', data);
+
+                if (data.type === 'offer') {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    signalingServer.send(JSON.stringify(peerConnection.localDescription));
+                } else if (data.type === 'answer') {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+                } else if (data.type === 'candidate') {
+                    const candidate = new RTCIceCandidate(data.candidate);
+                    await peerConnection.addIceCandidate(candidate);
+                }
+            } catch (error) {
+                console.error('Ошибка при попытке распознать сообщение как JSON:', error);
+            }
         }
     };
 
