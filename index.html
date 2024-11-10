@@ -112,7 +112,7 @@
     let localStream;
     let remoteStream;
     let peerConnection;
-    const signalingServer = new WebSocket('wss://https://toleutay.onrender.com');
+    const signalingServer = new WebSocket('wss://toleutay.onrender.com');
 
     // Конфигурация ICE-серверов (нужна для NAT traversal)
     const configuration = {
@@ -161,9 +161,15 @@
     };
 
     signalingServer.onclose = () => {
-        console.log('WebSocket-соединение закрыто');
+        console.log('WebSocket-соединение закрыто, код:', event.code, 'причина:', event.reason);
         errorMessage.textContent = 'Соединение с сервером WebSocket закрыто.';
     };
+    if (signalingServer.readyState === WebSocket.OPEN) {
+        signalingServer.send(JSON.stringify(peerConnection.localDescription));
+    } else {
+        console.error('WebSocket is not open. Current state:', signalingServer.readyState);
+    }
+
     // Обработчик сообщений от WebSocket-сервера
     signalingServer.onmessage = async (message) => {
         const data = JSON.parse(message.data);
