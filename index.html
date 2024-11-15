@@ -5,67 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bratislava Kamzik</title>
     <style>
+        html {
+            overflow: hidden;
+        }
+
         body {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            height: 100vh;
+            overflow: hidden;
             margin: 0;
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
-        }
-
-        .main-container {
             display: flex;
-            justify-content: space-between; /* Размещаем контейнеры с промежутком */
-            width: 90%;
-            margin-top: 50px;
-        }
-
-        .container {
-            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             flex-direction: column;
-            align-items: flex-start;
-            width: 60%; /* Контейнер для видео из Братиславы займет 60% ширины */
         }
 
-        .container01 {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            width: 35%; /* Контейнер для камеры пользователя займет 35% ширины */
-        }
-
-        .container02 {
-            width: 40%;
-            margin-top: 20px;
+        .button-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        h1, h2 {
-            margin: 0;
-            padding-bottom: 10px;
+            gap: 15px;
         }
 
-        iframe {
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .draggable {
+            position: absolute;
+            cursor: move;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #ffffff;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: none; /* Initially hidden */
+            width: 300px;
+            max-height: 80%;
+            overflow: hidden;
+        }
+
+        .window-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            background-color: #e0e0e0;
+            border-bottom: 1px solid #ccc;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .control-btn {
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+            display: inline-block;
+            text-align: center;
+            line-height: 15px;
+            font-weight: bold;
+            color: white;
+            border-radius: 50%;
+        }
+
+        .close-btn { background-color: red; }
+        .maximize-btn { background-color: green; }
+        .minimize-btn { background-color: yellow; }
+
+        iframe, video {
             width: 100%;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
-        video {
-            width: 100%;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            transform: scaleX(-1); /* Отражаем видео */
-        }
-
-        button {
-            margin-top: 10px;
-            padding: 10px;
-            font-size: 16px;
-            cursor: pointer;
+        h1, h2 {
+            margin: 0;
         }
 
         .error {
@@ -74,30 +104,52 @@
     </style>
 </head>
 <body>
-<div class="main-container">
-    <!-- Контейнер для видео из Братиславы -->
-    <div class="container">
-        <h1>Bratislava Live Stream</h1>
-        <iframe width="560" height="315"
-                src="https://rtsp.me/embed/nzDnGR7d/"
-                title="Bratislava Kamzik"
-                frameborder="0"
-                allow="accelerometer; autoplay clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen>
-        </iframe>
-    </div>
 
-    <!-- Контейнер для камеры пользователя -->
-    <div class="container01">
-        <h2>Your Camera</h2>
-        <video id="video" autoplay></video>
-        <br>
-        <button id="stopBtn">Stop Camera</button>
-        <p id="errorMessage" class="error"></p>
-    </div>
+<div class="button-container">
+    <button onclick="showBratislavaStream()">Show Bratislava Live Stream</button>
+    <button onclick="showYourCamera()">Show Your Camera</button>
+    <button onclick="showFriendsCamera()">Show Friend's Camera</button>
 </div>
-<div class="container02">
-    <h2>Friend's camera</h2>
+
+<!-- Bratislava Stream -->
+<div id="bratislavaStream" class="container draggable" style="top: 10px; left: 10px;">
+    <div class="window-header">
+        <h1>Bratislava Live Stream</h1>
+        <div class="window-controls">
+            <span class="control-btn minimize-btn" onclick="minimizeWindow('bratislavaStream')">-</span>
+            <span class="control-btn maximize-btn" onclick="maximizeWindow('bratislavaStream')">[]</span>
+            <span class="control-btn close-btn" onclick="closeWindow('bratislavaStream')">x</span>
+        </div>
+    </div>
+    <iframe width="100%" height="200" src="https://rtsp.me/embed/nzDnGR7d/" title="Bratislava Kamzik" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+<!-- User Camera -->
+<div id="yourCamera" class="container draggable" style="top: 10px; right: 10px;">
+    <div class="window-header">
+        <h2>Your Camera</h2>
+        <div class="window-controls">
+            <span class="control-btn minimize-btn" onclick="minimizeWindow('yourCamera')">-</span>
+            <span class="control-btn maximize-btn" onclick="maximizeWindow('yourCamera')">[]</span>
+            <span class="control-btn close-btn" onclick="closeWindow('yourCamera')">x</span>
+        </div>
+    </div>
+    <video id="video" autoplay style="transform: scaleX(-1)"></video>
+    <button id="toggleCameraBtn">Toggle Camera</button>
+    <p id="errorMessage" class="error"></p>
+</div>
+
+<!-- Friend's Camera -->
+<div id="friendsCamera" class="container draggable">
+    <div class="window-header">
+        <h2>Friend's Camera</h2>
+        <div class="window-controls">
+            <span class="control-btn minimize-btn" onclick="minimizeWindow('friendsCamera')">-</span>
+            <span class="control-btn maximize-btn" onclick="maximizeWindow('friendsCamera')">[]</span>
+            <span class="control-btn close-btn" onclick="closeWindow('friendsCamera')">x</span>
+        </div>
+    </div>
     <video id="remoteVideo" autoplay playsinline></video>
     <button id="startCall">Start Call</button>
 </div>
@@ -105,161 +157,96 @@
 <script>
     const videoElement = document.getElementById('video');
     const errorMessage = document.getElementById('errorMessage');
-    const stopButton = document.getElementById('stopBtn');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const startCallButton = document.getElementById('startCall');
-
+    const toggleCameraButton = document.getElementById('toggleCameraBtn');
     let localStream;
-    let remoteStream;
-    let peerConnection;
-    const signalingServer = new WebSocket('wss://toleutay.onrender.com');
+    let isCameraOn = false;
 
-    // Конфигурация ICE-серверов (нужна для NAT traversal)
-    const configuration = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' }
-        ]
-    };
+    // Window functions
+    function closeWindow(id) {
+        document.getElementById(id).style.display = 'none';
+    }
 
-    // Запрос доступа к камере
+    function minimizeWindow(id) {
+        document.getElementById(id).style.height = '30px';
+    }
+
+    function maximizeWindow(id) {
+        const el = document.getElementById(id);
+        if (el.style.width === '100%' && el.style.height === '100%') {
+            el.style.width = '300px';
+            el.style.height = 'auto';
+        } else {
+            el.style.width = '100%';
+            el.style.height = '100%';
+            el.style.top = '0';
+            el.style.left = '0';
+        }
+    }
+
+    // Show/hide functions
+    function showBratislavaStream() {
+        document.getElementById('bratislavaStream').style.display = 'block';
+    }
+
+    function showYourCamera() {
+        document.getElementById('yourCamera').style.display = 'block';
+        startCamera();
+    }
+
+    function showFriendsCamera() {
+        document.getElementById('friendsCamera').style.display = 'block';
+    }
+
+    // Camera toggle function
+    toggleCameraButton.addEventListener('click', () => {
+        if (isCameraOn) {
+            stopCamera();
+        } else {
+            startCamera();
+        }
+    });
+
     async function startCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            videoElement.srcObject = stream;
-            errorMessage.textContent = '';  // Сброс сообщения об ошибке
-            localStream = stream; // Сохраняем локальный поток
-            console.log("Local camera started successfully");
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = localStream;
+            isCameraOn = true;
+            toggleCameraButton.textContent = "Stop Camera";
+            errorMessage.textContent = '';
         } catch (error) {
-            errorMessage.textContent = 'Ошибка при доступе к камере: ' + error.message;
-            console.error("Camera access error:", error);
+            errorMessage.textContent = 'Error accessing the camera: ' + error.message;
         }
     }
 
-    // Остановка камеры
     function stopCamera() {
-        let stream = videoElement.srcObject;
-        if (stream) {
-            let tracks = stream.getTracks();
-            tracks.forEach(track => track.stop());  // Останавливаем все треки (видео и аудио)
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
             videoElement.srcObject = null;
+            isCameraOn = false;
+            toggleCameraButton.textContent = "Start Camera";
         }
     }
 
-    // Запуск камеры при загрузке страницы
-    window.addEventListener('load', startCamera);
+    // Draggable functionality
+    document.querySelectorAll('.draggable').forEach(el => {
+        el.addEventListener('mousedown', onMouseDown);
+        function onMouseDown(event) {
+            event.preventDefault();
+            const shiftX = event.clientX - el.getBoundingClientRect().left;
+            const shiftY = event.clientY - el.getBoundingClientRect().top;
 
-    // Остановка камеры при нажатии на кнопку
-    stopButton.addEventListener('click', stopCamera);
-
-    signalingServer.onopen = () => {
-        console.log('WebSocket-соединение установлено');
-    };
-
-    signalingServer.onerror = (error) => {
-        console.error('Ошибка WebSocket:', error);
-        errorMessage.textContent = 'Ошибка подключения к серверу WebSocket.';
-    };
-
-    signalingServer.onclose = () => {
-        console.log('WebSocket-соединение закрыто, код:', event.code, 'причина:', event.reason);
-        errorMessage.textContent = 'Соединение с сервером WebSocket закрыто.';
-    };
-    if (signalingServer.readyState === WebSocket.OPEN) {
-        signalingServer.send(JSON.stringify(peerConnection.localDescription));
-    } else {
-        console.error('WebSocket is not open. Current state:', signalingServer.readyState);
-    }
-
-    // Обработчик сообщений от WebSocket-сервера
-    signalingServer.onmessage = async (message) => {
-        if (message.data instanceof Blob) {
-            // Если сообщение является Blob, преобразуем его в текст перед парсингом
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    console.log('Получено и распознано сообщение от сервера:', data);
-
-                    if (data.type === 'offer') {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-                        const answer = await peerConnection.createAnswer();
-                        await peerConnection.setLocalDescription(answer);
-                        signalingServer.send(JSON.stringify(peerConnection.localDescription));
-                    } else if (data.type === 'answer') {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-                    } else if (data.type === 'candidate') {
-                        const candidate = new RTCIceCandidate(data.candidate);
-                        await peerConnection.addIceCandidate(candidate);
-                    }
-                } catch (error) {
-                    console.error('Ошибка при попытке распознать сообщение как JSON:', error);
-                }
-            };
-            reader.readAsText(message.data);
-        } else {
-            // Обычная обработка JSON-сообщений
-            try {
-                const data = JSON.parse(message.data);
-                console.log('Получено сообщение от сервера:', data);
-
-                if (data.type === 'offer') {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    signalingServer.send(JSON.stringify(peerConnection.localDescription));
-                } else if (data.type === 'answer') {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-                } else if (data.type === 'candidate') {
-                    const candidate = new RTCIceCandidate(data.candidate);
-                    await peerConnection.addIceCandidate(candidate);
-                }
-            } catch (error) {
-                console.error('Ошибка при попытке распознать сообщение как JSON:', error);
+            function onMouseMove(event) {
+                el.style.left = `${event.clientX - shiftX}px`;
+                el.style.top = `${event.clientY - shiftY}px`;
             }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', () => {
+                document.removeEventListener('mousemove', onMouseMove);
+            });
         }
-    };
-
-    // Функция для начала вызова
-    startCallButton.onclick = async () => {
-        if (!localStream) {
-            console.log('Local stream is not available');
-            return;
-        }
-
-        console.log('Starting peer connection...');
-        peerConnection = new RTCPeerConnection(configuration);
-
-        // Добавляем локальный стрим в соединение
-        localStream.getTracks().forEach((track) => {
-            peerConnection.addTrack(track, localStream);
-        });
-
-        // Обработчик получения удаленного стрима
-        peerConnection.ontrack = (event) => {
-            if (!remoteStream) {
-                remoteStream = new MediaStream();
-                remoteVideo.srcObject = remoteStream;
-            }
-            remoteStream.addTrack(event.track);
-        };
-
-        // ICE-кандидаты отправляем через WebSocket
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                signalingServer.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
-            }
-        };
-
-        try {
-            console.log('Creating SDP offer...');
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            signalingServer.send(JSON.stringify(peerConnection.localDescription));
-            console.log('SDP offer sent');
-        } catch (error) {
-            console.error('Error creating offer:', error);
-        }
-    };
+        el.ondragstart = () => false;
+    });
 </script>
 </body>
 </html>
