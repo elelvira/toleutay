@@ -228,11 +228,34 @@
     const socket = new WebSocket('wss://toleutay.onrender.com'); // WebSocket сервер
 
     // Элементы интерфейса
-    const localVideoElement = document.getElementById('video');
+   // const localVideoElement = document.getElementById('video');
     const remoteVideoElement = document.getElementById('remoteVideo');
 
     // Обработка WebSocket-соединения
     socket.onopen = () => console.log('WebSocket подключен');
+    document.getElementById('startCall').addEventListener('click', async () => {
+        try {
+            // Инициализация PeerConnection
+            peerConnection = createPeerConnection();
+
+            // Запрашиваем доступ к локальной камере
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            // Устанавливаем локальный поток в локальное видео
+            videoElement.srcObject = localStream;
+
+            // Создаём и отправляем Offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            sendMessage({ type: 'offer', offer });
+            console.log('Offer sent');
+        } catch (error) {
+            console.error('Ошибка при старте вызова:', error);
+        }
+    });
+
     socket.onmessage = async (event) => {
         const message = JSON.parse(event.data);
 
@@ -310,6 +333,29 @@
         await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
         console.log('ICE-кандидат добавлен');
     }
+
+    async function endCall() {
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+            console.log('Call ended');
+        }
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.close();
+        }
+    }
+
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+
+    socket.onclose = () => {
+        console.log('WebSocket connection closed');
+    };
 
     // Отправка сообщений через WebSocket
     function sendMessage(message) {
