@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <title>Bratislava Kamzik</title>
     <style>
         html {
@@ -57,6 +58,17 @@
             overflow: hidden;
         }
 
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 15px;
+            height: 15px;
+            background-color: gray;
+            cursor: se-resize;
+        }
+
+
         .window-header {
             display: flex;
             justify-content: space-between;
@@ -72,7 +84,7 @@
             gap: 5px;
         }
 
-        .control-btn {
+        .control-btn i {
             width: 15px;
             height: 15px;
             cursor: pointer;
@@ -80,13 +92,13 @@
             text-align: center;
             line-height: 15px;
             font-weight: bold;
-            color: white;
+            color: black;
             border-radius: 50%;
         }
 
-        .close-btn { background-color: red; }
-        .maximize-btn { background-color: green; }
-        .minimize-btn { background-color: yellow; }
+        .close-btn { background-color: transparent; }
+        .maximize-btn { background-color: transparent; }
+        .minimize-btn { background-color: transparent; }
 
         iframe, video {
             width: 100%;
@@ -101,6 +113,38 @@
         .error {
             color: red;
         }
+
+        #minimizedPanel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            gap: 10px;
+            border-top: 1px solid #ccc;
+            overflow-x: auto;
+            z-index: 200;
+        }
+
+        #minimizedPanel button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        #minimizedPanel button:hover {
+            background-color: #0056b3;
+        }
+
     </style>
 </head>
 <body>
@@ -116,13 +160,14 @@
     <div class="window-header">
         <h1>Bratislava Live Stream</h1>
         <div class="window-controls">
-            <span class="control-btn minimize-btn" onclick="minimizeWindow('bratislavaStream')">-</span>
-            <span class="control-btn maximize-btn" onclick="maximizeWindow('bratislavaStream')">[]</span>
-            <span class="control-btn close-btn" onclick="closeWindow('bratislavaStream')">x</span>
+            <span class="control-btn minimize-btn" onclick="minimizeWindow('bratislavaStream')"><i class="fas fa-minus"></i></span>
+            <span class="control-btn maximize-btn" onclick="maximizeWindow('bratislavaStream')"><i class="fas fa-expand"></i></span>
+            <span class="control-btn close-btn" onclick="closeWindow('bratislavaStream')"><i class="fas fa-times"></i></span>
         </div>
     </div>
     <iframe width="100%" height="200" src="https://rtsp.me/embed/nzDnGR7d/" title="Bratislava Kamzik" frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <div class="resize-handle"></div>
 </div>
 
 <!-- User Camera -->
@@ -130,14 +175,15 @@
     <div class="window-header">
         <h2>Your Camera</h2>
         <div class="window-controls">
-            <span class="control-btn minimize-btn" onclick="minimizeWindow('yourCamera')">-</span>
-            <span class="control-btn maximize-btn" onclick="maximizeWindow('yourCamera')">[]</span>
-            <span class="control-btn close-btn" onclick="closeWindow('yourCamera')">x</span>
+            <span class="control-btn minimize-btn" onclick="minimizeWindow('yourCamera')"><i class="fas fa-minus"></i></span>
+            <span class="control-btn maximize-btn" onclick="maximizeWindow('yourCamera')"><i class="fas fa-expand"></i></span>
+            <span class="control-btn close-btn" onclick="closeWindow('yourCamera')"><i class="fas fa-times"></i></span>
         </div>
     </div>
     <video id="video" autoplay style="transform: scaleX(-1)"></video>
     <button id="toggleCameraBtn">Toggle Camera</button>
     <p id="errorMessage" class="error"></p>
+    <div class="resize-handle"></div>
 </div>
 
 <!-- Friend's Camera -->
@@ -145,14 +191,17 @@
     <div class="window-header">
         <h2>Friend's Camera</h2>
         <div class="window-controls">
-            <span class="control-btn minimize-btn" onclick="minimizeWindow('friendsCamera')">-</span>
-            <span class="control-btn maximize-btn" onclick="maximizeWindow('friendsCamera')">[]</span>
-            <span class="control-btn close-btn" onclick="closeWindow('friendsCamera')">x</span>
+            <span class="control-btn minimize-btn" onclick="minimizeWindow('friendsCamera')"><i class="fas fa-minus"></i></span>
+            <span class="control-btn maximize-btn" onclick="maximizeWindow('friendsCamera')"><i class="fas fa-expand"></i></span>
+            <span class="control-btn close-btn" onclick="closeWindow('friendsCamera')"><i class="fas fa-times"></i></span>
         </div>
     </div>
     <video id="remoteVideo" autoplay playsinline></video>
     <button id="startCall">Start Call</button>
+    <div class="resize-handle"></div>
 </div>
+
+<div id="minimizedPanel" style="position: fixed; bottom: 0; left: 0; right: 0; height: 50px; background: #ccc; display: flex; align-items: center; padding: 5px; gap: 10px; overflow-x: auto;"></div>
 
 <script>
     const videoElement = document.getElementById('video');
@@ -161,13 +210,137 @@
     let localStream;
     let isCameraOn = false;
 
+
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            {
+                urls: 'turn:your.turn.server:3478',
+                username: 'username',
+                credential: 'password'
+            }
+        ]
+    };
+
+
+    let remoteStream;          // Поток от друга
+    let peerConnection;        // RTCPeerConnection
+    const socket = new WebSocket('wss://toleutay.onrender.com'); // WebSocket сервер
+
+    // Элементы интерфейса
+    const localVideoElement = document.getElementById('video');
+    const remoteVideoElement = document.getElementById('remoteVideo');
+
+    // Обработка WebSocket-соединения
+    socket.onopen = () => console.log('WebSocket подключен');
+    socket.onmessage = async (event) => {
+        const message = JSON.parse(event.data);
+
+        switch (message.type) {
+            case 'offer':
+                console.log('Получен offer');
+                await handleOffer(message.offer);
+                break;
+            case 'answer':
+                console.log('Получен answer');
+                await handleAnswer(message.answer);
+                break;
+            case 'ice-candidate':
+                console.log('Получен ICE-кандидат');
+                await handleIceCandidate(message.candidate);
+                break;
+            default:
+                console.log('Неизвестный тип сообщения:', message);
+        }
+    };
+
+    // Получение камеры и микрофона
+
+
+    // Инициализация WebRTC и отправка предложения
+
+    // Создание RTCPeerConnection
+    function createPeerConnection() {
+        const pc = new RTCPeerConnection(configuration);
+
+        // Обработка ICE-кандидатов
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                sendMessage({ type: 'ice-candidate', candidate: event.candidate });
+            }
+        };
+
+        // Обработка полученных медиапотоков
+        pc.ontrack = (event) => {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+                remoteVideoElement.srcObject = remoteStream;
+            }
+            remoteStream.addTrack(event.track);
+        };
+
+        console.log('RTCPeerConnection создано');
+        return pc;
+    }
+
+    // Обработка входящего offer
+    async function handleOffer(offer) {
+        peerConnection = createPeerConnection();
+
+        // Добавляем локальный поток
+        localStream.getTracks().forEach((track) => peerConnection.addTrack(track, localStream));
+
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+        // Создаём и отправляем answer
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        sendMessage({ type: 'answer', answer });
+    }
+
+    // Обработка входящего answer
+    async function handleAnswer(answer) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log('Удалённое описание установлено');
+    }
+
+    // Обработка ICE-кандидатов
+    async function handleIceCandidate(candidate) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('ICE-кандидат добавлен');
+    }
+
+    // Отправка сообщений через WebSocket
+    function sendMessage(message) {
+        socket.send(JSON.stringify(message));
+    }
+
     // Window functions
     function closeWindow(id) {
         document.getElementById(id).style.display = 'none';
     }
 
     function minimizeWindow(id) {
-        document.getElementById(id).style.height = '30px';
+        const windowElement = document.getElementById(id);
+        windowElement.style.display = 'none'; // Скрываем окно
+
+        const minimizedPanel = document.getElementById('minimizedPanel');
+        let button = document.createElement('button');
+        button.textContent = windowElement.querySelector('.window-header h1, .window-header h2').textContent || "Window";
+        button.style.padding = '10px';
+        button.style.cursor = 'pointer';
+
+        // Устанавливаем событие для развертывания окна
+        button.addEventListener('click', () => {
+            windowElement.style.display = 'block';
+            windowElement.style.height = 'auto';
+            windowElement.style.width = '300px'; // Восстанавливаем размер
+            windowElement.style.zIndex = '100'; // Выводим окно на передний план
+            minimizedPanel.removeChild(button); // Убираем кнопку из панели
+        });
+
+        minimizedPanel.appendChild(button);
     }
 
     function maximizeWindow(id) {
@@ -183,18 +356,35 @@
         }
     }
 
+
     // Show/hide functions
     function showBratislavaStream() {
-        document.getElementById('bratislavaStream').style.display = 'block';
+        //document.getElementById('bratislavaStream').style.display = 'block';
+        const windowElement = document.getElementById('bratislavaStream');
+        resetWindowPosition(windowElement); // Сброс позиции окна
+        windowElement.style.display = 'block';
     }
 
     function showYourCamera() {
-        document.getElementById('yourCamera').style.display = 'block';
+        //document.getElementById('yourCamera').style.display = 'block';
+        const windowElement = document.getElementById('yourCamera');
+        resetWindowPosition(windowElement); // Сброс позиции окна
+        windowElement.style.display = 'block';
         startCamera();
     }
 
     function showFriendsCamera() {
-        document.getElementById('friendsCamera').style.display = 'block';
+        //document.getElementById('friendsCamera').style.display = 'block';
+        const windowElement = document.getElementById('friendsCamera');
+        resetWindowPosition(windowElement); // Сброс позиции окна
+        windowElement.style.display = 'block';
+    }
+
+    function resetWindowPosition(windowElement) {
+        windowElement.style.top = '10px';
+        windowElement.style.left = '10px';
+        windowElement.style.width = '300px';
+        windowElement.style.height = 'auto';
     }
 
     // Camera toggle function
@@ -229,8 +419,10 @@
 
     // Draggable functionality
     document.querySelectorAll('.draggable').forEach(el => {
-        el.addEventListener('mousedown', onMouseDown);
-        function onMouseDown(event) {
+        // Перетаскивание
+        el.addEventListener('mousedown', (event) => {
+            if (event.target.classList.contains('resize-handle')) return; // Игнорируем перетаскивание при масштабировании
+
             event.preventDefault();
             const shiftX = event.clientX - el.getBoundingClientRect().left;
             const shiftY = event.clientY - el.getBoundingClientRect().top;
@@ -244,9 +436,43 @@
             document.addEventListener('mouseup', () => {
                 document.removeEventListener('mousemove', onMouseMove);
             });
-        }
-        el.ondragstart = () => false;
+        });
+
+        // Масштабирование
+        const resizeHandle = el.querySelector('.resize-handle');
+        resizeHandle.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+
+            const startWidth = el.offsetWidth;
+            const startHeight = el.offsetHeight;
+            const startX = event.clientX;
+            const startY = event.clientY;
+
+            const minWidth = 200;
+            const minHeight = 150;
+            const maxWidth = window.innerWidth - 20;
+            const maxHeight = window.innerHeight - 20;
+
+            function onMouseMove(event) {
+                let newWidth = startWidth + (event.clientX - startX);
+                let newHeight = startHeight + (event.clientY - startY);
+
+                newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+                newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+
+                el.style.width = `${newWidth}px`;
+                el.style.height = `${newHeight}px`;
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', () => {
+                document.removeEventListener('mousemove', onMouseMove);
+            });
+        });
+
+        el.ondragstart = () => false; // Отключаем стандартное поведение drag'n'drop
     });
+
 </script>
 </body>
 </html>
