@@ -259,20 +259,18 @@
     socket.onmessage = async (event) => {
         let message;
 
-        // Проверяем, является ли событие объектом Blob
         if (event.data instanceof Blob) {
-            // Если да, то преобразуем Blob в текст
-            const text = await event.data.text();
             try {
-                message = JSON.parse(text);  // Парсим строку как JSON
+                // Преобразуем Blob в текст
+                const text = await event.data.text();
+                message = JSON.parse(text); // Парсим как JSON
             } catch (error) {
-                console.error('Ошибка парсинга JSON из Blob:', error, text);
+                console.error('Ошибка парсинга JSON из Blob:', error, event.data);
                 return;
             }
         } else if (typeof event.data === 'string') {
-            // Если данные уже строка, просто парсим их как JSON
             try {
-                message = JSON.parse(event.data);
+                message = JSON.parse(event.data); // Парсим строку как JSON
             } catch (error) {
                 console.error('Ошибка парсинга JSON:', error, event.data);
                 return;
@@ -282,7 +280,7 @@
             return;
         }
 
-        // Обработка сообщения в зависимости от типа
+        // Обработка сообщения
         switch (message.type) {
             case 'offer':
                 console.log('Получен offer');
@@ -300,6 +298,7 @@
                 console.log('Неизвестный тип сообщения:', message);
         }
     };
+
 
 
     // Получение камеры и микрофона
